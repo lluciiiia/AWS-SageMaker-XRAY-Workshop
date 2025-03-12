@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dự đoán bệnh</title>
+    <style>
+        /* CSS tổng thể */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            color: #fff;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #444;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .left-panel, .right-panel {
+            padding: 20px;
+            flex: 1;
+        }
+        .left-panel {
+            max-width: 400px;
+            border-right: 1px solid #555;
+        }
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            text-align: center;
+            color: #00bfa5;
+        }
+        /* Button Add Image giống Add View */
+        .add-image-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            margin: 10px auto;
+            display: block;
+            width: 80%;
+        }
+        .add-image-btn:hover {
+            background-color: #0056b3;
+        }
+        /* Form và các phần khác */
+        .file-input {
+            display: none;
+        }
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 10px auto;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        .prediction {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #555;
+            color: #fff;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+        .result-container {
+            margin-top: 20px;
+        }
+        #preview {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: none;
+        }
+        /* Lịch sử dự đoán */
+        .history {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .history-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .history-item strong {
+            color: #00bfa5;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hệ thống dự đoán bệnh</h1>
+    <div class="container">
+        <!-- Panel bên trái -->
+        <div class="left-panel">
+            <button class="add-image-btn" onclick="document.getElementById('file-input').click()">+ Add Image</button>
+            <input type="file" id="file-input" class="file-input" name="image" accept="image/*" onchange="previewImage(event)">
+            <button id="predict-btn" class="submit-btn">Dự đoán</button>
+
+            <div id="loading" class="loading">Đang xử lý...</div>
+            <div id="result" class="result-container"></div>
+
+            
+        </div>
+
+        <!-- Panel bên phải -->
+        <div class="right-panel">
+            <img id="preview" src="" alt="Ảnh xem trước">
+        </div>
+    </div>
+
+    <script>
+
+        function previewImage(event) {
+            const preview = document.getElementById('preview');
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function() {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            };
+
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
+
+        document.getElementById('predict-btn').onclick = async () => {
+            const fileInput = document.querySelector("input[name='image']");
+            if (!fileInput.files.length) {
+                alert("Vui lòng chọn một ảnh để dự đoán!");
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+            const formData = new FormData();
+            formData.append("image", fileInput.files[0]);
+
+            loading.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    let resultHTML = '<h2>Kết quả dự đoán:</h2>';
+                    for (const [model, result] of Object.entries(data)) {
+                        const color = result === 'Bình thường' ? 'green' : 'red';
+                        resultHTML += `
+                            <div class="prediction">
+                                <strong>${model}:</strong> 
+                                <span style="color: ${color}">${result}</span>
+                            </div>
+                        `;
+                    }
+                    resultDiv.innerHTML = resultHTML;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red">Lỗi: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                resultDiv.innerHTML = `<p style="color: red">Lỗi kết nối: ${error.message}</p>`;
+            } finally {
+                loading.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>
