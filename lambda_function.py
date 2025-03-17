@@ -2,8 +2,8 @@ import json
 import boto3
 import base64
 import os
-from PIL import Image
 import io
+from PIL import Image
 
 # AWS SageMaker client
 sagemaker_runtime = boto3.client("sagemaker-runtime")
@@ -40,28 +40,57 @@ def lambda_handler(event, context):
 
         # Handle image prediction
         elif path == "/predict":
-            body = json.loads(event["body"])
-            if "image" not in body:
-                return {"statusCode": 400, "body": json.dumps({"error": "No image provided"})}
+            print("Received event:", event)
 
-            image_bytes = base64.b64decode(body["image"])
+            if "body" not in event or not event["body"]:
+                return {"statusCode": 400, "body": json.dumps({"error": "No body in request"})}
 
-            if not is_allowed_file("image.jpg"):  # Simulating a filename
+            # Decode body if Base64 encoded
+            body_bytes = base64.b64decode(event["body"]) if event["isBase64Encoded"] else event["body"].encode()
+
+            # Try to extract image bytes manually
+            try:
+                delimiter = b"\r\n"
+                parts = body_bytes.split(delimiter)
+                
+                # Locate the file content (skipping headers)
+                file_start = next(i for i in range(len(parts)) if b"Content-Type" in parts[i]) + 2
+                file_content = b"\r\n".join(parts[file_start:-2])  # Ignore last boundary
+                
+                if not file_content:
+                    return {"statusCode": 400, "body": json.dumps({"error": "Empty file received"})}
+                
+            except Exception as e:
+                return {"statusCode": 400, "body": json.dumps({"error": f"Malformed form-data: {str(e)}"})}
+
+            # Process the extracted image bytes
+            if not is_allowed_file("image.jpg"):  # Simulated filename check
                 return {"statusCode": 400, "body": json.dumps({"error": "Invalid file format"})}
 
-            processed_image = preprocess_image(image_bytes)
+            processed_image = preprocess_image(file_content)
 
+            # Get SageMaker endpoint
             SAGEMAKER_ENDPOINT = os.environ.get("SAGEMAKER_ENDPOINT")
             if not SAGEMAKER_ENDPOINT:
                 return {"statusCode": 500, "body": json.dumps({"error": "SAGEMAKER_ENDPOINT not set"})}
 
+            print("SAGEMAKER_ENDPOINT:", SAGEMAKER_ENDPOINT)
+
+            # Call SageMaker endpoint
             response = sagemaker_runtime.invoke_endpoint(
                 EndpointName=SAGEMAKER_ENDPOINT,
                 ContentType="application/json",
                 Body=json.dumps({"image": processed_image}),
             )
 
-            prediction = json.loads(response["Body"].read().decode())
+            # Read response
+            response_body = response["Body"].read().decode()
+            if not response_body:
+                return {"statusCode": 500, "body": json.dumps({"error": "Empty response from SageMaker"})}
+
+            prediction = json.loads(response_body)
+
+            print("Prediction:", prediction)
 
             return {
                 "statusCode": 200,
