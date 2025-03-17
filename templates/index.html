@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dự đoán bệnh</title>
+    <title>Disease Prediction</title>
     <style>
-        /* CSS tổng thể */
+        /* General CSS */
         body {
             font-family: Arial, sans-serif;
             background-color: #333;
@@ -36,7 +36,7 @@
             text-align: center;
             color: #00bfa5;
         }
-        /* Button Add Image giống Add View */
+        /* Button Add Image similar to Add View */
         .add-image-btn {
             background-color: #007bff;
             color: white;
@@ -53,7 +53,7 @@
         .add-image-btn:hover {
             background-color: #0056b3;
         }
-        /* Form và các phần khác */
+        /* Form and other elements */
         .file-input {
             display: none;
         }
@@ -92,7 +92,7 @@
             border-radius: 8px;
             display: none;
         }
-        /* Lịch sử dự đoán */
+        /* Prediction History */
         .history {
             max-height: 400px;
             overflow-y: auto;
@@ -111,28 +111,25 @@
     </style>
 </head>
 <body>
-    <h1>Hệ thống dự đoán bệnh</h1>
+    <h1>Disease Prediction System</h1>
     <div class="container">
-        <!-- Panel bên trái -->
+        <!-- Left Panel -->
         <div class="left-panel">
             <button class="add-image-btn" onclick="document.getElementById('file-input').click()">+ Add Image</button>
             <input type="file" id="file-input" class="file-input" name="image" accept="image/*" onchange="previewImage(event)">
-            <button id="predict-btn" class="submit-btn">Dự đoán</button>
+            <button id="predict-btn" class="submit-btn">Predict</button>
 
-            <div id="loading" class="loading">Đang xử lý...</div>
+            <div id="loading" class="loading">Processing...</div>
             <div id="result" class="result-container"></div>
-
-            
         </div>
 
-        <!-- Panel bên phải -->
+        <!-- Right Panel -->
         <div class="right-panel">
-            <img id="preview" src="" alt="Ảnh xem trước">
+            <img id="preview" src="" alt="Image Preview">
         </div>
     </div>
 
     <script>
-
         function previewImage(event) {
             const preview = document.getElementById('preview');
             const file = event.target.files[0];
@@ -148,11 +145,10 @@
             }
         }
 
-
         document.getElementById('predict-btn').onclick = async () => {
             const fileInput = document.querySelector("input[name='image']");
             if (!fileInput.files.length) {
-                alert("Vui lòng chọn một ảnh để dự đoán!");
+                alert("Please select an image to predict!");
                 return;
             }
 
@@ -172,9 +168,9 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    let resultHTML = '<h2>Kết quả dự đoán:</h2>';
+                    let resultHTML = '<h2>Prediction Result:</h2>';
                     for (const [model, result] of Object.entries(data)) {
-                        const color = result === 'Bình thường' ? 'green' : 'red';
+                        const color = result === 'Normal' ? 'green' : 'red';
                         resultHTML += `
                             <div class="prediction">
                                 <strong>${model}:</strong> 
@@ -184,11 +180,11 @@
                     }
                     resultDiv.innerHTML = resultHTML;
                 } else {
-                    resultDiv.innerHTML = `<p style="color: red">Lỗi: ${data.error}</p>`;
+                    resultDiv.innerHTML = `<p style="color: red">Error: ${data.error}</p>`;
                 }
             } catch (error) {
                 console.error("Fetch error:", error);
-                resultDiv.innerHTML = `<p style="color: red">Lỗi kết nối: ${error.message}</p>`;
+                resultDiv.innerHTML = `<p style="color: red">Connection error: ${error.message}</p>`;
             } finally {
                 loading.style.display = 'none';
             }
